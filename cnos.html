@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CNOS</title>
+<style>
+:root{--bg:#e9eef7;--pn:#fff;--tx:#14213d;--mu:#5b6b8c;--bd:#cfd8ea;--ac:#4f8cff;--tb:rgba(255,255,255,.85);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0e1424;--pn:#1a2238;--tx:#e8edf9;--mu:#93a0c0;--bd:#2c3654;--tb:rgba(20,27,48,.88)}}
+:root[data-theme=dark]{--bg:#0e1424;--pn:#1a2238;--tx:#e8edf9;--mu:#93a0c0;--bd:#2c3654;--tb:rgba(20,27,48,.88)}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--tx);font:14px system-ui,-apple-system,Segoe UI,sans-serif;overflow:hidden;user-select:none}
+#desk{position:absolute;inset:0 0 44px 0;background:radial-gradient(circle at 20% 10%,color-mix(in srgb,var(--ac) 35%,transparent),transparent 60%),var(--bg)}
+.ic{display:inline-flex;flex-direction:column;align-items:center;width:78px;margin:8px;cursor:pointer;font-size:12px;text-align:center}.ic i{font-style:normal;font-size:30px}.ic:hover{background:#fff2;border-radius:8px}
+.win{position:absolute;background:var(--pn);border:1px solid var(--bd);border-radius:10px;box-shadow:0 8px 30px #0004;display:flex;flex-direction:column;max-width:98vw;max-height:calc(100% - 8px);min-width:200px;overflow:hidden}
+.th{display:flex;justify-content:space-between;padding:6px 10px;background:var(--ac);color:#fff;cursor:move;font-weight:600;touch-action:none}
+.th b{cursor:pointer;margin-left:10px;padding:0 4px}.wb{flex:1;overflow:auto;padding:10px;user-select:text}
+#tb{position:absolute;left:0;right:0;bottom:0;height:44px;background:var(--tb);backdrop-filter:blur(8px);border-top:1px solid var(--bd);display:flex;align-items:center;gap:6px;padding:0 8px;z-index:99999}
+button,input,textarea,select{font:inherit;color:var(--tx);background:var(--pn);border:1px solid var(--bd);border-radius:6px;padding:5px 9px}
+button{cursor:pointer}button:hover{border-color:var(--ac)}button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
+#tasks{flex:1;display:flex;gap:4px;overflow:auto}#tasks button.on{border-color:var(--ac)}
+#sm{position:absolute;left:8px;bottom:52px;width:260px;max-height:70%;overflow:auto;background:var(--pn);border:1px solid var(--bd);border-radius:12px;padding:8px;z-index:99998;display:none;box-shadow:0 8px 30px #0004}
+#sm div.it{padding:7px 10px;border-radius:6px;cursor:pointer}#sm div.it:hover{background:var(--bd)}
+#toast{position:absolute;right:10px;bottom:54px;z-index:99999;display:flex;flex-direction:column;gap:6px}#toast div{background:var(--pn);border:1px solid var(--ac);padding:8px 12px;border-radius:8px}
+#lock{position:absolute;inset:0;z-index:100000;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px}
+.row{display:flex;gap:6px;margin:6px 0;flex-wrap:wrap;align-items:center}textarea{width:100%;height:200px;resize:none}
+.g{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.g button{padding:10px}canvas{background:#fff;border:1px solid var(--bd);border-radius:6px;max-width:100%;touch-action:none}
+.m{color:var(--mu);font-size:12px}.chat{height:220px;overflow:auto;border:1px solid var(--bd);border-radius:6px;padding:6px}.chat p{margin:4px 0}
+</style></head><body>
+<div id="lock"><h1 style="margin:0">CNOS</h1><div class="m">One platform to work, learn, create, and play.</div>
+<input id="un" placeholder="Username" maxlength="20"><button class="p" id="go">Sign in / Create account</button></div>
+<div id="desk"></div><div id="toast"></div>
+<div id="sm"></div>
+<div id="tb"><button class="p" id="sb">⊞ Start</button><div id="tasks"></div><span class="m" id="st"></span><button id="bell">🔔</button><span id="ck"></span></div>
+<script>
+const $=(s,e=document)=>e.querySelector(s);let S,U,z=10,logs=[],tasks=[];
+const LS={g:k=>{try{return localStorage.getItem(k)}catch(e){return null}},s:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
+const save=()=>LS.s('cnos:'+U,JSON.stringify(S));
+const esc=t=>String(t).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function toast(t){logs.push(t);const d=document.createElement('div');d.textContent=t;$('#toast').append(d);setTimeout(()=>d.remove(),2800)}
+function login(n){U=n;let r;try{r=JSON.parse(LS.g('cnos:'+n))}catch(e){}
+ S=r||{theme:'auto',ac:'#4f8cff',files:{'welcome.txt':'Welcome to CNOS! Your files are saved automatically.'},inst:['snake'],hi:{},t:0};
+ LS.s('cnos:last',n);$('#lock').style.display='none';theme();desk();toast('Welcome, '+n)}
+function theme(){const r=document.documentElement;S.theme=='auto'?r.removeAttribute('data-theme'):r.dataset.theme=S.theme;r.style.setProperty('--ac',S.ac)}
+$('#go').onclick=()=>{const n=$('#un').value.trim();if(n)login(n)};$('#un').value=LS.g('cnos:last')||'';
+$('#un').onkeydown=e=>{if(e.key=='Enter')$('#go').click()};
+
+/* Window manager */
+function win(title,icon,w,h,build){const d=document.createElement('div');d.className='win';
+ d.style.cssText=`left:${30+Math.random()*100|0}px;top:${20+Math.random()*60|0}px;width:min(${w}px,96vw);height:min(${h}px,88%);z-index:${++z}`;
+ d.innerHTML=`<div class=th><span>${icon} ${title}</span><span><b data-a=m>–</b><b data-a=x>✕</b></span></div><div class=wb></div>`;
+ $('#desk').append(d);const t={d,title,icon,close:[]};tasks.push(t);
+ d.onpointerdown=()=>{d.style.zIndex=++z;rt()};
+ const th=$('.th',d);th.onpointerdown=e=>{if(e.target.dataset.a)return;const ox=e.clientX-d.offsetLeft,oy=e.clientY-d.offsetTop;
+  const mv=ev=>{d.style.left=ev.clientX-ox+'px';d.style.top=Math.max(0,ev.clientY-oy)+'px'};
+  const up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up)};addEventListener('pointermove',mv);addEventListener('pointerup',up)};
+ th.onclick=e=>{const a=e.target.dataset.a;if(a=='x'){t.close.forEach(f=>f());d.remove();tasks=tasks.filter(x=>x!=t);rt()}if(a=='m'){d.style.display='none';rt()}};
+ t.d.body=$('.wb',d);build(t.d.body,t);rt();return t}
+function rt(){$('#tasks').innerHTML='';tasks.forEach(t=>{const b=document.createElement('button');b.textContent=t.icon+' '+t.title;b.className=t.d.style.display!='none'?'on':'';
+ b.onclick=()=>{t.d.style.display=t.d.style.display=='none'?'':'none';t.d.style.zIndex=++z;rt()};$('#tasks').append(b)})}
+
+/* Apps */
+const A={
+notepad:{n:'Notepad',i:'📝',f(b,t,fn){b.innerHTML=`<div class=row><input id=nm value="${esc(fn||'untitled.txt')}"><button class=p id=sv>Save</button></div><textarea id=ta></textarea>`;
+ $('#ta',b).value=fn&&S.files[fn]||'';$('#sv',b).onclick=()=>{S.files[$('#nm',b).value]=$('#ta',b).value;save();toast('Saved '+$('#nm',b).value)}}},
+calc:{n:'Calculator',i:'🧮',f(b){b.innerHTML='<input id=d style="width:100%;margin-bottom:6px;text-align:right" readonly><div class=g></div>';const d=$('#d',b);
+ '7 8 9 / 4 5 6 * 1 2 3 - 0 . = +'.split(' ').concat(['C']).forEach(k=>{const x=document.createElement('button');x.textContent=k;x.onclick=()=>{
+  if(k=='C')d.value='';else if(k=='='){try{if(!/^[\d+\-*/.() ]+$/.test(d.value))throw 0;d.value=Function('return '+d.value)()}catch(e){d.value='Error'}}else d.value+=k};$('.g',b).append(x)})}},
+paint:{n:'Paint',i:'🎨',f(b){b.innerHTML='<div class=row><input type=color id=c value="#4f8cff"><input type=range id=s min=1 max=20 value=4><button id=cl>Clear</button><input id=nm value=art.png size=8><button class=p id=sv>Save</button></div><canvas width=420 height=260></canvas>';
+ const c=$('canvas',b),x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,420,260);let dr=0;
+ const p=e=>{const r=c.getBoundingClientRect();return[(e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height]};
+ c.onpointerdown=e=>{dr=1;x.beginPath();x.moveTo(...p(e))};c.onpointermove=e=>{if(dr){x.strokeStyle=$('#c',b).value;x.lineWidth=$('#s',b).value;x.lineCap='round';x.lineTo(...p(e));x.stroke()}};c.onpointerup=()=>dr=0;
+ $('#cl',b).onclick=()=>{x.fillStyle='#fff';x.fillRect(0,0,420,260)};$('#sv',b).onclick=()=>{S.files[$('#nm',b).value]=c.toDataURL();save();toast('Saved to Files')}}},
+files:{n:'File Manager',i:'📁',f(b){const r=()=>{b.innerHTML='<div class=row><button class=p id=nw>+ New note</button></div>'+Object.keys(S.files).map(k=>`<div class=row><span style="flex:1">${k.endsWith('.png')?'🖼':'📄'} ${esc(k)}</span><button data-o="${esc(k)}">Open</button><button data-d="${esc(k)}">Delete</button></div>`).join('')};r();
+ b.onclick=e=>{const o=e.target.dataset.o,d=e.target.dataset.d;if(e.target.id=='nw')open('notepad');
+  if(o){o.endsWith('.png')?win(o,'🖼',440,320,q=>q.innerHTML=`<img src="${S.files[o]}" style="max-width:100%">`):open('notepad',o)}
+  if(d&&confirm('Delete '+d+'?')){delete S.files[d];save();r()}}}},
+store:{n:'App Store',i:'🛍',f(b){const r=()=>{b.innerHTML=Object.entries(CAT).map(([k,a])=>{const i=S.inst.includes(k);return`<div class=row><span style="flex:1">${a.i} <b>${a.n}</b> <span class=m>${a.c}</span></span><button ${i?'':'class=p'} data-k="${k}">${i?'Remove':'Install'}</button></div>`}).join('');
+ };r();b.onclick=e=>{const k=e.target.dataset.k;if(!k)return;S.inst=S.inst.includes(k)?S.inst.filter(x=>x!=k):[...S.inst,k];save();toast('Updated '+CAT[k].n);r();desk()}}},
+ai:{n:'CN-AI',i:'🤖',f(b){b.innerHTML='<div class=chat><p>🤖 Hi! Try "open paint", "list files", "what time is it", "calc 12*7", or "help".</p></div><div class=row><input id=q style="flex:1" placeholder="Ask CN-AI..."><button class=p id=sn>Send</button></div>';
+ const ch=$('.chat',b),say=(w,t)=>{ch.insertAdjacentHTML('beforeend',`<p>${w} ${esc(t)}</p>`);ch.scrollTop=1e9};
+ const go=()=>{const q=$('#q',b).value.trim();if(!q)return;$('#q',b).value='';say('🧑',q);const l=q.toLowerCase();let a;
+  const all={...A,...CAT};const hit=Object.entries(all).find(([k,v])=>l.startsWith('open')&&l.includes(v.n.toLowerCase().split(' ')[0]));
+  if(hit){open(hit[0]);a='Opening '+hit[1].n+'.'}
+  else if(l.startsWith('calc')){try{a='= '+Function('return '+q.slice(4).replace(/[^\d+\-*/.() ]/g,''))()}catch(e){a='I could not compute that.'}}
+  else if(l.includes('file'))a='You have '+Object.keys(S.files).length+' files: '+Object.keys(S.files).join(', ');
+  else if(l.includes('time')||l.includes('date'))a=new Date().toLocaleString();
+  else if(l.includes('screen'))a='Screen time this account: '+Math.round(S.t/60)+' min.';
+  else if(l.includes('help'))a='I can open apps, do quick math, list files, and report time or screen time. This MVP assistant runs locally, so it is not a full language model.';
+  else a='I am a simple local assistant in this MVP. Say "help" to see what I can do.';say('🤖',a)};
+ $('#sn',b).onclick=go;$('#q',b).onkeydown=e=>{if(e.key=='Enter')go()}}},
+browser:{n:'Browser',i:'🌐',f(b){b.innerHTML='<div class=row><input id=u style="flex:1" value="https://en.wikipedia.org"><button class=p id=g>Go</button></div><iframe style="width:100%;height:280px;border:1px solid var(--bd);border-radius:6px;background:#fff"></iframe><div class=m>Some sites block embedding and will not load here.</div>';
+ $('#g',b).onclick=()=>{let u=$('#u',b).value;if(!/^https?:/.test(u))u='https://'+u;$('iframe',b).src=u}}},
+settings:{n:'Settings',i:'⚙️',f(b){b.innerHTML=`<div class=row>Theme <select id=th><option>auto<option>light<option>dark</select></div><div class=row>Accent <input type=color id=ac value="${S.ac}"></div><div class=row>User: <b>${esc(U)}</b></div><div class=row>Screen time: <b>${Math.round(S.t/60)} min</b></div><div class=row><button id=rs>Reset this account</button></div><div class=m>Basic security: each account keeps its own data on this device. Settings save automatically.</div>`;
+ $('#th',b).value=S.theme;$('#th',b).onchange=e=>{S.theme=e.target.value;theme();save()};$('#ac',b).oninput=e=>{S.ac=e.target.value;theme();save()};
+ $('#rs',b).onclick=()=>{if(confirm('Erase all data for '+U+'?')){try{localStorage.removeItem('cnos:'+U)}catch(e){}location.reload()}}}},
+games:{n:'Games',i:'🎮',f(b){b.innerHTML='<b>Installed games</b><div class=row>'+(S.inst.map(k=>`<button data-k="${k}">${CAT[k].i} ${CAT[k].n}</button>`).join('')||'None. Get some in the App Store.')+`</div><b>High scores</b><div class=m>${Object.entries(S.hi).map(([k,v])=>k+': '+v).join(' · ')||'No scores yet'}</div>`;
+ b.onclick=e=>e.target.dataset.k&&open(e.target.dataset.k)}}};
+const CAT={
+snake:{n:'Snake',i:'🐍',c:'Game · offline',w:280,h:360,f(b,t){b.innerHTML='<canvas width=240 height=240></canvas><div class=row><span id=sc>Score 0</span><button data-d=L>◀</button><button data-d=U>▲</button><button data-d=D>▼</button><button data-d=R>▶</button></div>';
+ const x=$('canvas',b).getContext('2d');let s=[[5,5]],d=[1,0],f=[10,10],sc=0;const dirs={L:[-1,0],R:[1,0],U:[0,-1],D:[0,1]};
+ const k=e=>{const m={ArrowLeft:'L',ArrowRight:'R',ArrowUp:'U',ArrowDown:'D'}[e.key];if(m)d=dirs[m]};addEventListener('keydown',k);b.onclick=e=>e.target.dataset.d&&(d=dirs[e.target.dataset.d]);
+ const iv=setInterval(()=>{const h=[(s[0][0]+d[0]+20)%20,(s[0][1]+d[1]+20)%20];if(s.some(p=>p[0]==h[0]&&p[1]==h[1])){S.hi.Snake=Math.max(S.hi.Snake||0,sc);save();toast('Game over: '+sc);s=[[5,5]];sc=0}
+  s.unshift(h);if(h[0]==f[0]&&h[1]==f[1]){sc++;f=[Math.random()*20|0,Math.random()*20|0]}else s.pop();
+  x.fillStyle='#111';x.fillRect(0,0,240,240);x.fillStyle='#f55';x.fillRect(f[0]*12,f[1]*12,11,11);x.fillStyle='#5f8';s.forEach(p=>x.fillRect(p[0]*12,p[1]*12,11,11));$('#sc',b).textContent='Score '+sc},110);
+ t.close.push(()=>{clearInterval(iv);removeEventListener('keydown',k)})}},
+ttt:{n:'Tic-Tac-Toe',i:'❌',c:'Game · offline',w:260,h:300,f(b){let g=Array(9).fill(''),over=0;const W=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+ const win_=p=>W.some(l=>l.every(i=>g[i]==p));const r=()=>{b.innerHTML='<div class=g style="grid-template-columns:repeat(3,1fr)">'+g.map((v,i)=>`<button data-i=${i} style="height:60px;font-size:24px">${v||'·'}</button>`).join('')+'</div><div class=m id=ms>You are X.</div>'};r();
+ b.onclick=e=>{const i=e.target.dataset.i;if(i===undefined||g[i]||over)return;g[i]='X';let m='';if(win_('X')){over=1;m='You win!';S.hi.TicTacToe=(S.hi.TicTacToe||0)+1;save()}
+  else{const fr=g.map((v,j)=>v?-1:j).filter(j=>j>=0);if(!fr.length){over=1;m='Draw'}else{g[fr[Math.random()*fr.length|0]]='O';if(win_('O')){over=1;m='CN wins'}}}r();$('#ms',b).textContent=m||'Your move.'}}},
+timer:{n:'Stopwatch',i:'⏱',c:'Utility',w:240,h:150,f(b,t){let s=0,iv=0;b.innerHTML='<h2 id=v style="margin:4px">0.0s</h2><button class=p id=a>Start</button> <button id=r>Reset</button>';
+ $('#a',b).onclick=()=>{if(iv){clearInterval(iv);iv=0;$('#a',b).textContent='Start'}else{iv=setInterval(()=>{s+=.1;$('#v',b).textContent=s.toFixed(1)+'s'},100);$('#a',b).textContent='Stop'}};
+ $('#r',b).onclick=()=>{s=0;$('#v',b).textContent='0.0s'};t.close.push(()=>clearInterval(iv))}}};
+function open(k,arg){const a=A[k]||CAT[k];const sz={notepad:[440,340],calc:[240,300],paint:[460,380],files:[420,320],store:[420,300],ai:[400,360],browser:[520,400],settings:[380,280],games:[380,220]}[k]||[a.w,a.h];
+ win(a.n,a.i,sz[0],sz[1],(b,t)=>a.f(b,t,arg))}
+function desk(){const ks=[...Object.keys(A),...S.inst];$('#desk').innerHTML=ks.map(k=>{const a=A[k]||CAT[k];return`<div class=ic data-k="${k}"><i>${a.i}</i>${a.n}</div>`}).join('');
+ $('#sm').innerHTML=ks.map(k=>{const a=A[k]||CAT[k];return`<div class=it data-k="${k}">${a.i} ${a.n}</div>`}).join('')+`<div class=it data-k=_out>🔒 Sign out (${esc(U)})</div>`}
+$('#desk').ondblclick=e=>{const k=e.target.closest('.ic')?.dataset.k;k&&open(k)};
+$('#desk').onclick=e=>{const k=e.target.closest('.ic')?.dataset.k;if(k&&matchMedia('(pointer:coarse)').matches)open(k);$('#sm').style.display='none'};
+$('#sm').onclick=e=>{const k=e.target.dataset.k;if(!k)return;$('#sm').style.display='none';k=='_out'?location.reload():open(k)};
+$('#sb').onclick=e=>{e.stopPropagation();const m=$('#sm');m.style.display=m.style.display=='block'?'none':'block'};
+$('#bell').onclick=()=>win('Notifications','🔔',300,240,b=>b.innerHTML=logs.slice(-20).reverse().map(l=>`<p>${esc(l)}</p>`).join('')||'No notifications');
+setInterval(()=>{$('#ck').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});if(S){S.t+=5;$('#st').textContent='⏱ '+Math.round(S.t/60)+'m';if(S.t%60==0)save()}},5000);
+$('#ck').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+</script></body></html>
