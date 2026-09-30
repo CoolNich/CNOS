@@ -5,9 +5,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build ISO
-        run: bash build-cnos-iso.sh
+      - name: Build ISO inside Debian 12 container
+        run: |
+          docker run --rm --privileged -v "$PWD":/work -w /work debian:bookworm \
+            bash -c "apt-get update && apt-get install -y sudo && bash build-cnos-iso.sh" 2>&1 | tee build.log
+          test -f CNOS-boot.iso
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: CNOS-boot-iso
-          path: CNOS-boot.iso
+          name: CNOS-build-output
+          path: |
+            CNOS-boot.iso
+            build.log
